@@ -13,4 +13,6 @@ catalog:
   "@types/react-dom": 19.2.3
 
 allowBuilds:
-  sharp: false
+  esbuild: true
+  sharp: true
+  workerd: true
