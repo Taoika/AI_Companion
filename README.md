@@ -16,9 +16,11 @@ This Turborepo includes the following packages/apps:
 
 ### Apps and Packages
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
+- `apps/api`: a [Hono](https://hono.dev/) API on Cloudflare Workers (`@repo/api`)
+- `apps/web`: a [Next.js](https://nextjs.org/) app (port 3000)
+- `apps/admin`: a [Next.js](https://nextjs.org/) app (port 3001)
+- `@repo/contracts`: shared request/response types, zod schemas, and envelope helpers
+- `@repo/ui`: shared React component library (Button, Card, Input, Label, Badge, etc.)
 - `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
 - `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
 
@@ -31,6 +33,8 @@ This Turborepo has some additional tools already setup for you:
 - [TypeScript](https://www.typescriptlang.org/) for static type checking
 - [ESLint](https://eslint.org/) for code linting
 - [Prettier](https://prettier.io) for code formatting
+- [Zod](https://zod.dev/) for runtime schema validation (shared contracts)
+- [Hono RPC](https://hono.dev/docs/guides/rpc) for typed API communication
 
 ### Build
 
@@ -181,3 +185,86 @@ Learn more about the power of Turborepo:
 - 新增颜色、圆角、阴影，先更新 `theme.css`
 - 新增组件变体，优先扩展共享组件
 - 页面局部特殊样式要有明确原因，避免把例外写成常态
+
+## Contract & RPC 约定
+
+API 与前端之间通过共享 contract 通信，类型和 schema 统一定义在 `packages/contracts`。
+
+### 架构分层
+
+```
+packages/contracts   共享类型、schema、envelope helper（@repo/contracts）
+apps/api/src/app.ts  路由定义、入参校验、错误处理、导出 AppType
+apps/api/src/index.ts  仅 re-export app（Cloudflare Workers 入口）
+apps/web             通过 hc<AppType>() 消费 API route 类型
+```
+
+### 共享 contract 只放跨端稳定约定
+
+`packages/contracts` 中只包含以下内容：
+
+- 业务异常码 `BizCode`
+- 统一响应元信息 `ApiMeta`
+- 成功结构 `ApiSuccess<T>` / 失败结构 `ApiFailure<E>` / 总类型 `ApiResponse<T, E>`
+- envelope helper：`buildSuccess` / `buildFailure`
+- 最小链路的输入输出 schema（如 `PingRequestSchema` / `PingResponseSchema`）
+
+不放业务实现、不放运行时逻辑。
+
+### 输入输出必须有 schema
+
+只写 TypeScript type 不够——type 只在编译期存在。所有跨端请求参数用 zod 定义 schema，API 侧用 schema 校验入参，前端侧复用同一份类型。
+
+### 统一响应 envelope
+
+接口返回值分为两层语义：
+
+- **HTTP status**：传输层结果（200、400、404、500 …）
+- **error.code**：业务语义（`BizCode` 枚举）
+
+成功结构：`{ ok: true, data: T, meta: ApiMeta }`
+
+失败结构：`{ ok: false, error: { code, message, details? }, meta: ApiMeta }`
+
+`meta` 中的 `requestId` 用于日志串联，`timestamp` 用于排查定位。
+
+### 业务异常码命名规范
+
+采用 `DOMAIN.ACTION` 格式，当前定义：
+
+| Code | 含义 |
+|------|------|
+| `COMMON.INVALID_REQUEST` | 请求参数校验失败 |
+| `COMMON.NOT_FOUND` | 资源不存在 |
+| `AUTH.UNAUTHORIZED` | 未认证 |
+| `AUTH.FORBIDDEN` | 无权限 |
+| `BIZ.CONFLICT` | 业务冲突 |
+| `BIZ.RULE_VIOLATION` | 业务规则违反 |
+| `SYSTEM.INTERNAL_ERROR` | 服务端内部错误 |
+| `SYSTEM.UPSTREAM_TIMEOUT` | 上游超时 |
+
+新增业务 route 时直接在此集合扩展，保持命名风格和职责边界稳定。
+
+### 路由开发流程
+
+新增业务接口按以下顺序：
+
+1. 在 `packages/contracts` 补 schema 和类型
+2. 在 `apps/api/src/app.ts` 补 route（含 `validator('json', ...)` 校验）
+3. 前端通过 `hc<AppType>()` 消费，自动获得参数和返回值类型推导
+
+### 错误处理
+
+`apps/api/src/app.ts` 中统一处理三类异常：
+
+- `AppError`：业务异常，携带 `BizCode` 和 HTTP status
+- `HTTPException`：Hono 内置异常
+- 未捕获异常：统一返回 `SYSTEM.INTERNAL_ERROR` + 500
+
+`notFound` 处理器统一返回 `COMMON.NOT_FOUND` + 404。
+
+### 前端 RPC 调用
+
+前端使用 `hc<AppType>(apiBaseUrl)` 创建 typed client，通过 `client.rpc.system.ping.$post({ json })` 调用。调用失败时 fallback 到统一的 `ApiResponse` 错误结构。
+
+不要过早抽象通用 rpcClient / fetcher / service layer——当前目标是验证方向，最小链路跑通后再按需抽取。
