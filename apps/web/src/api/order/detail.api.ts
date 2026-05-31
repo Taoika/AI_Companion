@@ -1,26 +1,9 @@
-import type {
-  ApiResponse,
-  OrderDetailResponse,
-} from '@repo/contracts'
-import { BizCode } from '@repo/contracts'
-import { serverURL } from '@/api/client'
+import type { OrderDetailRequest, OrderDetailResponse } from '@repo/contracts'
+import { http } from '@/http'
 
-export async function getOrderDetail(): Promise<ApiResponse<OrderDetailResponse>> {
-  try {
-    const response = await fetch(serverURL('/rpc/order'))
-
-    return await response.json()
-  } catch (error) {
-    return {
-      ok: false,
-      error: {
-        code: BizCode.SYSTEM_UPSTREAM_TIMEOUT,
-        message: error instanceof Error ? error.message : 'API request failed',
-      },
-      meta: {
-        requestId: 'unavailable',
-        timestamp: new Date().toISOString(),
-      },
-    }
-  }
+export function postOrderDetail(payload: OrderDetailRequest) {
+  return http.post<OrderDetailRequest, OrderDetailResponse>(
+    '/rpc/order/detail',
+    payload,
+  )
 }

@@ -4,6 +4,7 @@ export * from './common/response.ts'
 
 // 系统域
 export * from './system/ping.contract.ts'
+export * from './system/health.contract.ts'
 
 // 目录域
 export * from './catalog/list.contract.ts'

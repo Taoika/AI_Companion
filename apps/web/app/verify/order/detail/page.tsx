@@ -1,11 +1,12 @@
-import { getOrderDetail } from '@/api/order/detail.api'
+import { postOrderDetail } from '@/api/order/detail.api'
 import {
   Card,
   CardContent,
 } from '@repo/ui/card'
 
 export default async function OrderDetailVerifyPage() {
-  const result = await getOrderDetail()
+  const payload = { id: 'order-001' }
+  const result = await postOrderDetail(payload)
   const responseBody = JSON.stringify(result, null, 2)
 
   return (
@@ -22,11 +23,17 @@ export default async function OrderDetailVerifyPage() {
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-full border border-border px-3 py-1">
-              GET /rpc/order
+              POST /rpc/order/detail
             </span>
             <span className="rounded-full border border-border px-3 py-1">
               {result.ok ? 'ok=true' : `code=${result.error.code}`}
             </span>
+          </div>
+          <div className="rounded-2xl border border-border bg-muted/40 p-4">
+            <p className="text-sm font-medium text-foreground">Payload</p>
+            <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-all text-xs leading-6 text-muted-foreground">
+              {JSON.stringify(payload, null, 2)}
+            </pre>
           </div>
           <div className="rounded-2xl border border-border bg-muted/40 p-4">
             <p className="text-sm font-medium text-foreground">Response</p>
