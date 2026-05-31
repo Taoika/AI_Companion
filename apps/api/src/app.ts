@@ -1,15 +1,7 @@
-import {
-  BizCode,
-  PingRequestSchema,
-  buildFailure,
-  buildSuccess,
-  type ApiMeta,
-} from '@repo/contracts'
-import { zValidator } from '@hono/zod-validator'
-import { flattenError } from 'zod/v4/core'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { getApiEnv } from './env'
+import { BizCode, buildFailure, type ApiMeta } from '@repo/contracts'
+import routes from './routes'
 
 type AppErrorStatus = 400 | 401 | 403 | 404 | 409 | 422 | 500 | 504
 
@@ -24,11 +16,11 @@ class AppError extends Error {
   }
 }
 
-const app = new Hono<{
-  Bindings: {
-    APP_ENV: 'development' | 'test' | 'production'
-  }
-}>()
+type Bindings = {
+  APP_ENV: 'development' | 'test' | 'production'
+}
+
+const app = new Hono<{ Bindings: Bindings }>()
 
 function createMeta(): ApiMeta {
   return {
@@ -70,56 +62,10 @@ app.notFound((c) =>
 )
 
 // ---------------------------------------------------------------------------
-// Routes
+// Mount routes
 // ---------------------------------------------------------------------------
 
-const routes = app
-  .get('/health', (c) => {
-    const env = getApiEnv(c.env)
-
-    return c.json(
-      buildSuccess(
-        {
-          service: 'api',
-          env: env.APP_ENV,
-        },
-        createMeta(),
-      ),
-    )
-  })
-  .post(
-    '/rpc/system/ping',
-    zValidator('json', PingRequestSchema, (result, c) => {
-      if (!result.success) {
-        return c.json(
-          buildFailure(
-            {
-              code: BizCode.COMMON_INVALID_REQUEST,
-              message: 'Invalid request payload',
-              details: flattenError(result.error),
-            },
-            createMeta(),
-          ),
-          400,
-        )
-      }
-    }),
-    (c) => {
-      const payload = c.req.valid('json')
-      const env = getApiEnv(c.env)
-
-      return c.json(
-        buildSuccess(
-          {
-            service: 'api',
-            message: `pong, ${payload.name}`,
-            env: env.APP_ENV,
-          },
-          createMeta(),
-        ),
-      )
-    },
-  )
+app.route('/', routes)
 
 export type AppType = typeof routes
 

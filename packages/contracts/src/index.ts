@@ -1,78 +1,15 @@
-import { z } from 'zod'
+// 公共模块
+export * from './common/biz-code.ts'
+export * from './common/response.ts'
 
-// ---------------------------------------------------------------------------
-// Business error codes
-// ---------------------------------------------------------------------------
+// 系统域
+export * from './system/ping.contract.ts'
 
-export const BizCode = {
-  COMMON_INVALID_REQUEST: 'COMMON.INVALID_REQUEST',
-  COMMON_NOT_FOUND: 'COMMON.NOT_FOUND',
-  AUTH_UNAUTHORIZED: 'AUTH.UNAUTHORIZED',
-  AUTH_FORBIDDEN: 'AUTH.FORBIDDEN',
-  BIZ_CONFLICT: 'BIZ.CONFLICT',
-  BIZ_RULE_VIOLATION: 'BIZ.RULE_VIOLATION',
-  SYSTEM_INTERNAL_ERROR: 'SYSTEM.INTERNAL_ERROR',
-  SYSTEM_UPSTREAM_TIMEOUT: 'SYSTEM.UPSTREAM_TIMEOUT',
-} as const
+// 目录域
+export * from './catalog/list.contract.ts'
 
-export type BizCode = (typeof BizCode)[keyof typeof BizCode]
+// 用户域
+export * from './user/profile.contract.ts'
 
-// ---------------------------------------------------------------------------
-// Unified response envelope
-// ---------------------------------------------------------------------------
-
-export interface ApiMeta {
-  requestId: string
-  timestamp: string
-}
-
-export interface ApiSuccess<T> {
-  ok: true
-  data: T
-  meta: ApiMeta
-}
-
-export interface ApiError<E = unknown> {
-  code: BizCode
-  message: string
-  details?: E
-}
-
-export interface ApiFailure<E = unknown> {
-  ok: false
-  error: ApiError<E>
-  meta: ApiMeta
-}
-
-export type ApiResponse<T, E = unknown> = ApiSuccess<T> | ApiFailure<E>
-
-// ---------------------------------------------------------------------------
-// Envelope helpers
-// ---------------------------------------------------------------------------
-
-export function buildSuccess<T>(data: T, meta: ApiMeta): ApiSuccess<T> {
-  return { ok: true, data, meta }
-}
-
-export function buildFailure<E = unknown>(
-  error: ApiError<E>,
-  meta: ApiMeta,
-): ApiFailure<E> {
-  return { ok: false, error, meta }
-}
-
-// ---------------------------------------------------------------------------
-// Ping – minimal contract for validating the full RPC chain
-// ---------------------------------------------------------------------------
-
-export const PingRequestSchema = z.object({
-  name: z.string().trim().min(1),
-})
-
-export const PingResponseSchema = z.object({
-  service: z.literal('api'),
-  message: z.string(),
-})
-
-export type PingRequest = z.infer<typeof PingRequestSchema>
-export type PingResponse = z.infer<typeof PingResponseSchema>
+// 订单域
+export * from './order/detail.contract.ts'
