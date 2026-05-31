@@ -10,11 +10,37 @@ import { Input } from '@repo/ui/input'
 import { Label } from '@repo/ui/label'
 import { Separator } from '@repo/ui/separator'
 import { TailwindDemo } from '@repo/ui/tailwind-demo'
+import { AdminEnvBadge } from '../src/admin-env-badge'
+import { getAdminServerEnv } from '../src/env.server'
 
 export default function Home() {
+  const env = getAdminServerEnv()
+
   return (
     <>
       <TailwindDemo appName="admin" />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Environment overview</CardTitle>
+          <CardDescription>
+            The admin app reads private server variables and public browser variables separately.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <p>APP_ENV</p>
+              <p>{env.APP_ENV}</p>
+            </div>
+            <div>
+              <p>API_BASE_URL</p>
+              <p>{env.API_BASE_URL}</p>
+            </div>
+          </div>
+          <AdminEnvBadge />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

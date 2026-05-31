@@ -1,4 +1,4 @@
-  import type { AppType } from '@repo/api'
+import type { AppType } from '@repo/api'
 import {
   BizCode,
   type ApiResponse,
@@ -17,8 +17,8 @@ import { Label } from '@repo/ui/label'
 import { Separator } from '@repo/ui/separator'
 import { TailwindDemo } from '@repo/ui/tailwind-demo'
 import { hc, type InferResponseType } from 'hono/client'
-
-const apiBaseUrl = process.env.API_BASE_URL ?? 'http://127.0.0.1:8787'
+import { getWebServerEnv } from '../src/env.server'
+import { WebEnvBadge } from '../src/web-env-badge'
 
 type PingRpcResponse = InferResponseType<
   ReturnType<typeof hc<AppType>>['rpc']['system']['ping']['$post']
@@ -26,7 +26,7 @@ type PingRpcResponse = InferResponseType<
 
 const rpcPayload = { name: 'web' } as const
 
-async function getPingResponse(): Promise<PingRpcResponse> {
+async function getPingResponse(apiBaseUrl: string): Promise<PingRpcResponse> {
   const client = hc<AppType>(apiBaseUrl)
 
   try {
@@ -51,13 +51,24 @@ async function getPingResponse(): Promise<PingRpcResponse> {
 }
 
 export default async function Home() {
-  const pingResult = await getPingResponse()
+  const env = getWebServerEnv()
+  const pingResult = await getPingResponse(env.API_BASE_URL)
   const requestBody = JSON.stringify(rpcPayload, null, 2)
   const responseBody = JSON.stringify(pingResult, null, 2)
 
   return (
     <>
       <TailwindDemo appName="web" />
+
+      <section className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+        <span className="rounded-full border border-border px-3 py-1">
+          server {env.APP_ENV}
+        </span>
+        <span className="rounded-full border border-border px-3 py-1">
+          {env.API_BASE_URL}
+        </span>
+        <WebEnvBadge />
+      </section>
 
       <section className="py-10">
         <Card className="overflow-hidden border border-border bg-background shadow-soft">
