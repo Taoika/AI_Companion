@@ -18,6 +18,7 @@
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",
     "@tailwindcss/postcss": "catalog:",
+    "uuidv7": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
